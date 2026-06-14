@@ -1,0 +1,143 @@
+#!/bin/bash
+
+# Dummy xadmin mock script
+
+CMD="$1"
+ACTION="$2"
+
+if [ "$CMD" = "streamer" ] && [ "$ACTION" = "status" ]; then
+  # Output a fake JSON array of streamers
+  cat <<EOF
+[
+  {
+    "id": "34",
+    "name": "Streamer 2",
+    "status": "stopped",
+    "threads": 4,
+    "eps": 0,
+    "uptime": "2h 15m"
+  },
+  {
+    "id": "str-2",
+    "name": "Kafka Ingest",
+    "status": "Running",
+    "threads": 2,
+    "eps": 140,
+    "uptime": "5m"
+  }
+]
+EOF
+  exit 0
+fi
+
+if [ "$CMD" = "streamer" ] && [ "$ACTION" = "logs" ]; then
+  # Output the specific error log provided for testing
+  cat <<'EOF'
+{
+  "streamers": [
+    {
+      "audit_log": {
+        "change_log": "mysql-bin.029797:201359496:1",
+        "destination": null,
+        "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+        "event_log": "event-2026-01-13_13-14-39.log:2693443423-2693445565",
+        "source": {
+          "database": "airpayme",
+          "table": "tbl_business_profiles",
+          "event": "update",
+          "data": {
+            "ADDRESS": "E 37/26 H, Block E1",
+            "BUSINESS": "K K CYBER SERVICES"
+          }
+        },
+        "status": "failed",
+        "streamer_id": 34,
+        "timestamp": "2026-05-27T05:03:40.000Z",
+        "wt": 0
+      },
+      "error_log": {
+        "audit_log": "audit-2026-01-13_13-14-39.log:858084706:858085926",
+        "change_log": "mysql-bin.029797:201359496:1",
+        "code": "1225",
+        "error_type": "RuleFailure",
+        "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+        "event_log": "event-2026-01-13_13-14-39.log:2693443423:2693445565",
+        "extra_info": {
+          "destination_database": "airpay_analytics",
+          "destination_event": "update",
+          "destination_table": "flt_business_profiles",
+          "rule_id": "22d78526-b270-4dd4-80d7-cdad22320dae",
+          "source_data": {
+            "ADDRESS": "E 37/26 H, Block E1, Khajoor Wala Road, Moler Band Extension Badarpur 110044",
+            "BUSINESS": "K K CYBER SERVICES"
+          },
+          "source_database": "airpayme",
+          "source_event": "update",
+          "source_table": "tbl_business_profiles"
+        },
+        "level": "error",
+        "message": "error in reference - failed to prepare query (Error 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '?' at line 1)",
+        "streamer_id": 34,
+        "streamer_mode": "live",
+        "streamer_name": "Streamer 2",
+        "timestamp": "2026-05-27T05:03:40.000Z"
+      },
+      "event_log": [
+        {
+          "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+          "event_start_pos": 2693443423,
+          "order": 1,
+          "timestamp": "2026-05-27T05:03:40.000Z"
+        },
+        {
+          "changelog_info": "mysql-bin.029797:201359496:1",
+          "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+          "order": 2,
+          "source_database": "airpayme",
+          "source_event": "update",
+          "source_table": "tbl_business_profiles",
+          "type": "source_meta_data",
+          "wt": 0
+        },
+        {
+          "destination_database": "airpay_analytics",
+          "destination_event": "update",
+          "destination_table": "flt_business_profiles",
+          "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+          "order": 3,
+          "stage": "stage_1",
+          "type": "destination_meta_data"
+        },
+        {
+          "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+          "order": 4,
+          "rules": {
+            "22d78526-b270-4dd4-80d7-cdad22320dae": [
+              {
+                "query": "SELECT t1.CATEGORYID FROM airpayme.tbl_business_profiles_category AS t1  WHERE t1.PROFILEID ?;",
+                "result": "Error 1064 (42000): You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '?' at line 1",
+                "rule_type": "reference",
+                "variable": "ref_1"
+              }
+            ]
+          },
+          "type": "smart_rule"
+        },
+        {
+          "event_end_pos": 2693445565,
+          "event_id": "1779858220191-351fbcf8-7c82-407b-a01a-863df5583c66",
+          "order": 5,
+          "processing_time_ms": "3ms"
+        }
+      ],
+      "streamer_id": 34
+    }
+  ]
+}
+EOF
+  exit 0
+fi
+
+# Fallback generic success
+echo '{"success": true}'
+exit 0
