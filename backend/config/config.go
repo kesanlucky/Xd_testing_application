@@ -24,3 +24,16 @@ var (
 	CmdXdStart         = []string{"Xd", "start", "--format", "json"}
 	CmdXdStop          = []string{"Xd", "stop", "--format", "json"}
 )
+
+// Monitoring Log Configuration
+var (
+	MonLogDir         = "./logs/monitor"     // Directory for monitoring log files
+	MonLogMaxFileSize = 10 * 1024 * 1024     // 10 MB default max per log file
+	MonLogMaxFiles    = 5                     // Keep at most 5 log files, oldest auto-deleted
+	MonLogInterval    = 5                     // Seconds between log entries
+)
+
+// Performance Test Configuration
+var (
+	XdConfigPath = "./xd_config.yaml"   // Path to the Xd YAML config file
+)

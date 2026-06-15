@@ -6,6 +6,16 @@ export interface SysMetrics {
   cpu: number;
   ram: number;
   running: boolean;
+  goroutines: number;
+  open_fds: number;
+  fd_limit: number;
+  disk_read_kb: number;
+  disk_write_kb: number;
+  tcp_conns: number;
+  net_bytes_in: number;
+  net_bytes_out: number;
+  virtual_mem: number;
+  disk_usage_pct: number;
 }
 
 export interface StreamerInfo {
@@ -64,7 +74,13 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // ── REAL BACKEND SSE DATA ──
-  const [metrics, setMetrics] = useState<SysMetrics>({ pid: 0, cpu: 0, ram: 0, running: false });
+  const [metrics, setMetrics] = useState<SysMetrics>({
+    pid: 0, cpu: 0, ram: 0, running: false,
+    goroutines: 0, open_fds: 0, fd_limit: 0,
+    disk_read_kb: 0, disk_write_kb: 0,
+    tcp_conns: 0, net_bytes_in: 0, net_bytes_out: 0,
+    virtual_mem: 0, disk_usage_pct: 0
+  });
   const [streamers, setStreamers] = useState<StreamerInfo[]>([]);
   
   const [uptimeStr, setUptimeStr] = useState('00:00:00');
@@ -77,7 +93,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     sse.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data);
-        const m: SysMetrics = data.metrics || { pid: 0, cpu: 0, ram: 0, running: false };
+        const defaults: SysMetrics = {
+          pid: 0, cpu: 0, ram: 0, running: false,
+          goroutines: 0, open_fds: 0, fd_limit: 0,
+          disk_read_kb: 0, disk_write_kb: 0,
+          tcp_conns: 0, net_bytes_in: 0, net_bytes_out: 0,
+          virtual_mem: 0, disk_usage_pct: 0
+        };
+        const m: SysMetrics = { ...defaults, ...data.metrics };
         setMetrics(m);
 
         if (m.running) {

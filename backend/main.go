@@ -6,9 +6,14 @@ import (
 
 	"xdtest/modules/dbtests"
 	"xdtest/modules/monitor"
+	"xdtest/modules/monlog"
+	"xdtest/modules/perftest"
 )
 
 func main() {
+	// Start the background monitoring logger (rotating structured logs)
+	monlog.StartMonitorLogger()
+
 	mux := http.NewServeMux()
 
 	// CORS Middleware Helper
@@ -29,6 +34,7 @@ func main() {
 	// Register module routes
 	dbtests.RegisterRoutes(mux, corsHandler)
 	monitor.RegisterRoutes(mux, corsHandler)
+	perftest.RegisterRoutes(mux, corsHandler)
 
 	log.Println("XD Test backend server running on :8081")
 	log.Fatal(http.ListenAndServe(":8081", mux))

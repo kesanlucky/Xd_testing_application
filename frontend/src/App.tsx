@@ -9,6 +9,8 @@ import Home from './pages/Home';
 import RuleTests from './modules/rule-tests/RuleTests';
 import RunDbTests from './modules/db-tests/RunDbTests';
 import ConfigureDbTests from './modules/db-tests/ConfigureDbTests';
+import PerfTest from './modules/perf-test/PerfTest';
+import { PerfTestProvider } from './modules/perf-test/PerfTestContext';
 
 // Shared Layout Component
 const AppLayout: React.FC = () => {
@@ -67,6 +69,9 @@ const AppLayout: React.FC = () => {
           <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/rule-tests">
             Rule Tests
           </NavLink>
+          <NavLink className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} to="/perf-test">
+            Perf Test
+          </NavLink>
 
           {/* DB Tests Module Group */}
           <div className="nav-group">
@@ -103,6 +108,7 @@ const AppLayout: React.FC = () => {
         <Route path="/rule-tests" element={<RuleTests />} />
         <Route path="/db-tests" element={<RunDbTests />} />
         <Route path="/db-tests/configure" element={<ConfigureDbTests />} />
+        <Route path="/perf-test" element={<PerfTest />} />
       </Routes>
 
       {/* ── STATUS BAR ── */}
@@ -132,9 +138,11 @@ function App() {
     <AppProvider>
       <RuleTestsProvider>
         <DbTestsProvider>
-          <BrowserRouter>
-            <AppLayout />
-          </BrowserRouter>
+          <PerfTestProvider>
+            <BrowserRouter>
+              <AppLayout />
+            </BrowserRouter>
+          </PerfTestProvider>
         </DbTestsProvider>
       </RuleTestsProvider>
     </AppProvider>

@@ -1,0 +1,40 @@
+XD:
+  cluster_name: cluster_001
+  port: 2025
+  embedded_db_path: /tmp/pebble/
+  streamers:
+    - id: 34
+      name: "Streamer 2"
+      type: mstream
+      mstream_threads: 4
+      run_mode: live
+    - id: 64
+      name: "Kafka Ingest"
+      type: sstream
+      mstream_threads: 2
+      run_mode: live
+
+source_server:
+  flavor: "postgres"
+  hostname: "127.0.0.1"
+  username: "postgres"
+  password: "password"
+  database: "source_db"
+  port: 5432
+
+destination_server:
+  flavor: "mysql"
+  hostname: "127.0.0.1"
+  username: "root"
+  password: "Admin@123"
+  database: "dest_db"
+  port: 3306
+
+settings:
+  changelog_backend: embedded
+  mapping_backend: file
+  rule_path: ./rules/
+
+runtime:
+  gc_percent: 200
+  memory_limit_gb: 1

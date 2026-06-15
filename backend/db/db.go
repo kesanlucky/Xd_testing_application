@@ -6,9 +6,10 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
+	_ "github.com/microsoft/go-mssqldb"
 )
 
-// ConnectDB establishes a connection to MySQL or Postgres dynamically
+// ConnectDB establishes a connection to MySQL, Postgres, or MSSQL dynamically
 func ConnectDB(dbType, user, password, host string, port int, database string) (*sql.DB, error) {
 	var dsn string
 	var driver string
@@ -20,6 +21,9 @@ func ConnectDB(dbType, user, password, host string, port int, database string) (
 	case "postgres", "postgresql":
 		driver = "postgres"
 		dsn = fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, database)
+	case "mssql", "sqlserver":
+		driver = "sqlserver"
+		dsn = fmt.Sprintf("sqlserver://%s:%s@%s:%d?database=%s&encrypt=disable", user, password, host, port, database)
 	default:
 		return nil, fmt.Errorf("unsupported database type: %s", dbType)
 	}

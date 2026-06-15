@@ -43,6 +43,16 @@ interface StreamerInfo {
   posMethod?: number; // legacy UI state
 }
 
+// Helper to format bytes to human-readable
+const formatBytes = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(Math.abs(bytes) || 1) / Math.log(k));
+  const idx = Math.min(i, sizes.length - 1);
+  return parseFloat((bytes / Math.pow(k, idx)).toFixed(1)) + ' ' + sizes[idx];
+};
+
 const Home: React.FC = () => {
   const {
     metrics,
@@ -85,11 +95,19 @@ const Home: React.FC = () => {
   // Track the previous PID to reset charts if the backend restarts
   const [lastPid, setLastPid] = useState(metrics.pid);
 
+  // Track previous network/disk values for per-second delta calculation
+  const [prevNet, setPrevNet] = useState({ bytesIn: 0, bytesOut: 0, ts: 0 });
+  const [netRate, setNetRate] = useState({ inSec: 0, outSec: 0 });
+  const [prevDisk, setPrevDisk] = useState({ readKB: 0, writeKB: 0, ts: 0 });
+  const [diskRate, setDiskRate] = useState({ readSec: 0, writeSec: 0 });
+
   useEffect(() => {
     if (metrics.pid !== lastPid) {
        // Reset chart if PID changed (meaning app restarted)
        setChartDataState({ cpu: Array(30).fill(0), ram: Array(30).fill(0), eps: Array(30).fill(0) });
        setLastPid(metrics.pid);
+       setPrevNet({ bytesIn: 0, bytesOut: 0, ts: 0 });
+       setPrevDisk({ readKB: 0, writeKB: 0, ts: 0 });
     }
 
     const totalEps = streamers.reduce((acc, s) => acc + (s.eps || 0), 0);
@@ -99,6 +117,31 @@ const Home: React.FC = () => {
       ram: [...prev.ram.slice(1), parseFloat((metrics.ram / 512 * 100).toFixed(1))],
       eps: [...prev.eps.slice(1), parseFloat((totalEps / 500 * 100).toFixed(1))]
     }));
+
+    // Calculate network rate (per second)
+    const now = Date.now();
+    if (prevNet.ts > 0) {
+      const dtSec = (now - prevNet.ts) / 1000;
+      if (dtSec > 0) {
+        setNetRate({
+          inSec: Math.max(0, (metrics.net_bytes_in - prevNet.bytesIn) / dtSec),
+          outSec: Math.max(0, (metrics.net_bytes_out - prevNet.bytesOut) / dtSec)
+        });
+      }
+    }
+    setPrevNet({ bytesIn: metrics.net_bytes_in, bytesOut: metrics.net_bytes_out, ts: now });
+
+    // Calculate disk I/O rate (per second)
+    if (prevDisk.ts > 0) {
+      const dtSec = (now - prevDisk.ts) / 1000;
+      if (dtSec > 0) {
+        setDiskRate({
+          readSec: Math.max(0, (metrics.disk_read_kb - prevDisk.readKB) / dtSec),
+          writeSec: Math.max(0, (metrics.disk_write_kb - prevDisk.writeKB) / dtSec)
+        });
+      }
+    }
+    setPrevDisk({ readKB: metrics.disk_read_kb, writeKB: metrics.disk_write_kb, ts: now });
 
   }, [metrics, streamers]);
 
@@ -177,6 +220,7 @@ const Home: React.FC = () => {
 
   const totalEps = streamers.reduce((acc, s) => acc + (s.eps || 0), 0);
   const totalThreads = streamers.reduce((acc, s) => acc + (s.threads || 0), 0);
+  const fdPct = metrics.fd_limit > 0 ? (metrics.open_fds / metrics.fd_limit) * 100 : 0;
 
   return (
     <div className="content">
@@ -230,7 +274,7 @@ const Home: React.FC = () => {
             </div>
           </div>
 
-          {/* Metrics Row */}
+          {/* Primary Metrics Row */}
           <div className="metrics-row">
             {/* CPU */}
             <div className="metric-box">
@@ -296,6 +340,86 @@ const Home: React.FC = () => {
               <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
                 <Line data={chartData} options={chartOptions as any} />
               </div>
+            </div>
+          </div>
+
+          {/* ── EXPANDED METRICS ROW ── */}
+          <div className="metrics-row metrics-row-expanded">
+            {/* Goroutines (OS Threads) */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">GOROUTINES</div>
+              <div className="metric-value ok">{metrics.goroutines}</div>
+              <div className="metric-unit">OS THREADS</div>
+            </div>
+
+            {/* TCP Connections */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">TCP CONNS</div>
+              <div className={`metric-value ${getMetricClass((metrics.tcp_conns / 100) * 100)}`}>
+                {metrics.tcp_conns}
+              </div>
+              <div className="metric-unit">ACTIVE</div>
+            </div>
+
+            {/* File Descriptors */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">FILE DESCRIPTORS</div>
+              <div className={`metric-value ${getMetricClass(fdPct)}`}>
+                {metrics.open_fds}
+              </div>
+              <div className="metric-unit">/ {metrics.fd_limit > 0 ? metrics.fd_limit.toLocaleString() : 'N/A'}</div>
+              <div className="metric-bar">
+                <div
+                  className={`metric-bar-fill ${getMetricClass(fdPct)}`}
+                  style={{ width: `${Math.min(100, fdPct)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Disk Usage */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">DISK USAGE</div>
+              <div className={`metric-value ${getMetricClass(metrics.disk_usage_pct)}`}>
+                {metrics.disk_usage_pct.toFixed(1)}
+              </div>
+              <div className="metric-unit">PERCENT</div>
+              <div className="metric-bar">
+                <div
+                  className={`metric-bar-fill ${getMetricClass(metrics.disk_usage_pct)}`}
+                  style={{ width: `${Math.min(100, metrics.disk_usage_pct)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            {/* Disk I/O */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">DISK I/O</div>
+              <div className="metric-value ok" style={{ fontSize: '1rem' }}>
+                <span style={{ color: '#00e5ff' }}>R</span> {diskRate.readSec.toFixed(1)}
+                <span style={{ margin: '0 0.3rem', opacity: 0.3 }}>|</span>
+                <span style={{ color: '#ff6b6b' }}>W</span> {diskRate.writeSec.toFixed(1)}
+              </div>
+              <div className="metric-unit">KB/SEC</div>
+            </div>
+
+            {/* Network I/O */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">NETWORK</div>
+              <div className="metric-value ok" style={{ fontSize: '1rem' }}>
+                <span style={{ color: '#00ff87' }}>↓</span> {formatBytes(netRate.inSec)}
+                <span style={{ margin: '0 0.3rem', opacity: 0.3 }}>|</span>
+                <span style={{ color: '#ffb800' }}>↑</span> {formatBytes(netRate.outSec)}
+              </div>
+              <div className="metric-unit">PER SEC</div>
+            </div>
+
+            {/* Virtual Memory */}
+            <div className="metric-box metric-box-sm">
+              <div className="metric-label">VIRTUAL MEM</div>
+              <div className="metric-value ok">
+                {metrics.virtual_mem.toFixed(0)}
+              </div>
+              <div className="metric-unit">MB ALLOCATED</div>
             </div>
           </div>
 
